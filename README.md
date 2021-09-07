@@ -96,6 +96,43 @@ void createFILE(Package * packageList, int numberOfPackeges)
 void printPackage(Package * packageList, int numberOfPackeges)
 ```
 
+
+## Rode localmente com um terminal linux
+
+Clone o projeto
+
+```bash
+  git clone https://github.com/Victor-Kings/Transferencia-de-arquivo.git
+```
+
+Vá para o diretório do projeto
+
+```bash
+  cd Transferencia-de-arquivo
+```
+Compile o server
+
+```bash
+  gcc server.c -o server
+```
+Compile o cliente
+
+```bash
+  gcc cli.c -o client
+```
+
+Execute o server
+```bash
+  ./server
+```
+
+Execute o cliente
+```bash
+  ./client
+```
+
+Brinque fazendo alterações no arquivo de texto :metal:
+
 ### Developers 
 * Hiago da Silva
 * Chistopher de Oliveira Souza.  
