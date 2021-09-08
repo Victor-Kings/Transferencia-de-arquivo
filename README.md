@@ -138,3 +138,4 @@ Brinque fazendo alterações no arquivo de texto :metal:
 * Chistopher de Oliveira Souza.  
 * Murilo de Paula Araujo.
 * Victor Reis
+* Leonardo Sanavio
