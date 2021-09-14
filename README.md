@@ -96,6 +96,35 @@ void createFILE(Package * packageList, int numberOfPackeges)
 void printPackage(Package * packageList, int numberOfPackeges)
 ```
 
+16. Implementação do pacote IP utilizando a seguinte estrutura:
+```c
+typedef struct {
+    char version[4];
+    char headerLength[4];
+    char serviceType[8];
+    char totalLength[16];
+    char identification[16];
+    char flags[4];
+    char fragmentOffset[12];
+    char timeToLife[8];
+    char protocol[8];
+    char headerCheckSum[16];
+    char sourceIpAddress[32];
+    char destinationIp[32];
+    char options[32];
+    char data[32];
+}PackageIP;
+```
+
+17. Função para criar um novo pacote.
+```c
+PackageIP * createIPPackage()
+```
+
+18. Função para adicionar os IP's de origem e o de destino.
+```c
+void setIP(char* destinationIP, PackageIP* package )
+```
 
 ## Rode localmente com um terminal linux
 
@@ -133,9 +162,9 @@ Execute o cliente
 
 Brinque fazendo alterações no arquivo de texto :metal:
 
-### Authors
-- [Chistopher de Oliveira Souza](https://github.com/Christopher-OSouza)
-- [Hiago da Silva](https://github.com/hiagomoa)
-- [Leonardo Sanavio](https://github.com/LeoSanavio)
-- [Murilo de Paula Araujo](https://www.github.com/murilodepa)
-- [Victor Reis](https://github.com/Victor-Kings)
+### Developers 
+* Hiago da Silva.
+* Chistopher de Oliveira Souza.  
+* Murilo de Paula Araujo.
+* Victor Reis.
+* Leonardo Sanavio.
