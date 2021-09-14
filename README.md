@@ -123,7 +123,7 @@ PackageIP * createIPPackage()
 
 18. Função para adicionar os IP's de origem e o de destino.
 ```c
-void setIP(char* destinationIP, PackageIP* package )
+void setIP(char* destinationIP, PackageIP* package)
 ```
 
 ## Rode localmente com um terminal linux
