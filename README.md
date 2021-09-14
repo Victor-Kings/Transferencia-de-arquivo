@@ -133,9 +133,9 @@ Execute o cliente
 
 Brinque fazendo alterações no arquivo de texto :metal:
 
-### Developers 
-* Hiago da Silva
-* Chistopher de Oliveira Souza.  
-* Murilo de Paula Araujo.
-* Victor Reis
-* Leonardo Sanavio
+### Authors
+- [Chistopher de Oliveira Souza](https://github.com/Christopher-OSouza)
+- [Hiago da Silva](https://github.com/hiagomoa)
+- [Leonardo Sanavio](https://github.com/LeoSanavio)
+- [Murilo de Paula Araujo](https://www.github.com/murilodepa)
+- [Victor Reis](https://github.com/Victor-Kings)
