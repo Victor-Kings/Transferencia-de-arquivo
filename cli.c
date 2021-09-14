@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <strings.h>
 #include <stdbool.h>
+#include "ipLib.h"
 #include "udpLib.h"
 
 #define splitFragment 50
@@ -121,7 +122,7 @@ void fragmentsToPackage(char fragments[1024][1024], int numberOfFragments, Packa
     }
 }
  
-void sendInfoPackege(int numberPackage, char protocol, socketType socketData){
+void sendInfoPackege(int numberPackage, socketType socketData){
     char number[10];
     sprintf(number, "%d", numberPackage);
     int resp = sendto(socketData.sock,number, sizeof(number), 0, (struct sockaddr *)&socketData.name, sizeof socketData.name);
@@ -132,7 +133,7 @@ void sendInfoPackege(int numberPackage, char protocol, socketType socketData){
 void sendPackage(Package *packageList, char protocol, int numberOfpackeges){
     socketType socketData = socketCreate(protocol);
 
-    sendInfoPackege(numberOfpackeges,"U",socketData);
+    sendInfoPackege(numberOfpackeges, socketData);
 
     bool check = validateChecksum(packageList, numberOfpackeges);
     if(check){
@@ -145,12 +146,19 @@ void sendPackage(Package *packageList, char protocol, int numberOfpackeges){
 int main() {
     int sock = 0, i=0,numberOfFragments, numberOfpackeges=0;
     Package * packageList =  malloc(1024*sizeof(Package));
+    PackageIP *packPezinho = createIPPackage();
     char fragments[1024][1024];
        
     createFragments("teste.txt", splitFragment, fragments, &numberOfFragments);
 
     fragmentsToPackage(fragments, numberOfFragments, packageList, &numberOfpackeges);
 
+    setIP("123.3123.123", packPezinho);
+    printf("\nORIGEM: %s\n",packPezinho->sourceIpAddress);
+    printf("\nDESTINO: %s\n",packPezinho->destinationIp);
+
     sendPackage(packageList, 'U', numberOfpackeges);
+
+
     return 0;
 }
