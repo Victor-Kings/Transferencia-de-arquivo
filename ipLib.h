@@ -48,7 +48,7 @@ void setTotalLength(PackageIP* package){
     memcpy( package->totalLength, str, sizeof(str));
 }
 
-void setProtocol(PackageIP* package, char protocol) {
+void setProtocol(PackageIP* package, char protocol){
     char str[16];
     if(protocol=='U'){
           sprintf(str, "%d", 17);
@@ -59,7 +59,7 @@ void setProtocol(PackageIP* package, char protocol) {
 }
 
 void setOptions(PackageIP* package) {
- memcpy( package->options, "", 32);
+    memcpy( package->options, "", 32);
 }
 
 void setFlags(PackageIP* package,int fragmented, int lastFragment){
@@ -92,7 +92,7 @@ void setTimeToLive(PackageIP* package){
 }
 
 void setIdentification(PackageIP* package, int index){
-     char str[16];
+    char str[16];
     sprintf(str, "%d",index);
     memcpy( package->identification, str, 16);
 }
@@ -111,11 +111,7 @@ unsigned int checksumVerifyIP(char *buffer, size_t len, unsigned int seed){
 
 void setHeaderCheckSum(PackageIP* package, unsigned int seed){
     unsigned int seedCheck=getCheckSumHeader(package);
-
-    
     package->headerCheckSum=seedCheck;
-
-
 }
 
 int getCheckSumHeader(PackageIP* package){
