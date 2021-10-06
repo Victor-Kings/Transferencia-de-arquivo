@@ -8,22 +8,23 @@
 #include <net/if.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include "udpLib.h"
 
 typedef struct {
-    char version[4];            //X
-    char headerLength[4];       //X
-    char serviceType[8];        //X
-    char totalLength[16];       //X
-    char identification[16];    //X
-    char flags[3];              //X
-    char fragmentOffset[12];    //X
-    char timeToLive[8];         //X
-    char protocol[8];           //X
-    char headerCheckSum[16]; //x
-    char sourceIpAddress[32]; //x
-    char destinationIp[32]; //x
-    char options[32]; //x
-    char data[32]; // ???????
+    char version[4];            
+    char headerLength[4];       
+    char serviceType[8];        
+    char totalLength[16];       
+    char identification[16];    
+    char flags[3];              
+    char fragmentOffset[12];    
+    char timeToLive[8];         
+    char protocol[8];           
+    int16_t headerCheckSum; 
+    char sourceIpAddress[32]; 
+    char destinationIp[32]; 
+    char options[32]; 
+    Package package;
 }PackageIP;
 
 PackageIP * createIPPackage() {
@@ -32,17 +33,19 @@ PackageIP * createIPPackage() {
 }
 
 void setVersion(PackageIP* package) {
-    memcpy( package->destinationIp, "4", 4);
+    memcpy( package->version, "4", 4);
 }
 
-void setServiceType(PackageIP* package, char* param ) {
-    memcpy( package->serviceType, param, 8);
+void setServiceType(PackageIP* package, char param ) {
+    char str[8];
+    sprintf(str, "%c",param);
+    memcpy(package->serviceType, str, sizeof(str));
 }
 
 void setTotalLength(PackageIP* package){
     char str[16];
-    sprintf(str, "%d", sizeof(package));
-    memcpy( package->totalLength, str, 16);
+    sprintf(str, "%d", sizeof(PackageIP));
+    memcpy( package->totalLength, str, sizeof(str));
 }
 
 void setProtocol(PackageIP* package, char protocol) {
@@ -59,8 +62,8 @@ void setOptions(PackageIP* package) {
  memcpy( package->options, "", 32);
 }
 
-void setFlags(int fragmented, int lastFragment){
-    char str[4];
+void setFlags(PackageIP* package,int fragmented, int lastFragment){
+    char str[3];
     str[0]='0';
     if(fragmented==1){
         str[1]='0';
@@ -69,15 +72,17 @@ void setFlags(int fragmented, int lastFragment){
     }
 
     if(lastFragment==1){
-        str[2]='0'
+        str[2]='0';
     } else {
         str[2]='1';
     }
      memcpy( package->flags, str, 3);
 }
 
-void setFragmentOffset(PackageIP* package, char* position ) {
-    memcpy( package->fragmentOffset, position, 12);
+void setFragmentOffset(PackageIP* package, int position ) {
+    char str[12];
+    sprintf(str, "%d", position);
+    memcpy( package->fragmentOffset, str, 12);
 }
 
 void setTimeToLive(PackageIP* package){
@@ -92,11 +97,11 @@ void setIdentification(PackageIP* package, int index){
     memcpy( package->identification, str, 16);
 }
 
-void setHeaderLenght(PackageIP* package, int length){
+void setHeaderLength(PackageIP* package){
      memcpy( package->headerLength, "60", 4);
 }
 
-unsigned int checksumVerify(char *buffer, size_t len, unsigned int seed){
+unsigned int checksumVerifyIP(char *buffer, size_t len, unsigned int seed){
     unsigned char *buf = (unsigned char *)buffer;
     size_t i;
     for (i = 0; i < len; ++i)
@@ -105,10 +110,37 @@ unsigned int checksumVerify(char *buffer, size_t len, unsigned int seed){
 }
 
 void setHeaderCheckSum(PackageIP* package, unsigned int seed){
-    int seedCheck = checksumVerify(package, sizeof(package), seed);
-    char str[16];
-    sprintf(str, "%d",seedCheck);
-    memcpy( package->headerCheckSum, str, 16);
+    unsigned int seedCheck=getCheckSumHeader(package);
+
+    
+    package->headerCheckSum=seedCheck;
+
+
+}
+
+int getCheckSumHeader(PackageIP* package){
+    int seedCheck=0;
+    seedCheck += checksumVerifyIP(package->version, sizeof(package->version), seed);
+    seedCheck += checksumVerifyIP(package->headerLength, sizeof(package->headerLength), seed);
+    seedCheck += checksumVerifyIP(package->serviceType, sizeof(package->serviceType), seed);
+    seedCheck += checksumVerifyIP(package->totalLength, sizeof(package->totalLength), seed);
+    seedCheck += checksumVerifyIP(package->identification, sizeof(package->identification), seed);
+    seedCheck += checksumVerifyIP(package->flags, sizeof(package->flags), seed);
+    seedCheck += checksumVerifyIP(package->fragmentOffset, sizeof(package->fragmentOffset), seed);
+    seedCheck += checksumVerifyIP(package->timeToLive, sizeof(package->timeToLive), seed);
+    seedCheck += checksumVerifyIP(package->protocol, sizeof(package->protocol), seed);
+    seedCheck += checksumVerifyIP(package->sourceIpAddress, sizeof(package->sourceIpAddress), seed);
+    seedCheck += checksumVerifyIP(package->destinationIp, sizeof(package->destinationIp), seed);
+    seedCheck += checksumVerifyIP(package->options, sizeof(package->options), seed);
+    return seedCheck;
+}
+
+void setData(PackageIP* packageIP, Package* package) {
+    packageIP->package.checksum=package->checksum;
+    packageIP->package.size = package->size;
+    packageIP->package.destinationPort = package->destinationPort;
+    packageIP->package.originPort = package->originPort;
+    memcpy( packageIP->package.data,package->data , sizeof(package->data));
 }
 
 void setIP(char* destinationIP, PackageIP* package ) {

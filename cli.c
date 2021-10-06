@@ -8,7 +8,6 @@
 #include <strings.h>
 #include <stdbool.h>
 #include "ipLib.h"
-#include "udpLib.h"
 
 #define splitFragment 50
 
@@ -16,7 +15,7 @@ void deletePackage(Package *package){
     free(package);
 }
 
-socketType socketCreate(char selectProtocol){
+socketType socketCreate(char selectProtocol, char* ip){
     int sock;
     struct sockaddr_in name;
     struct hostent *hp, *gethostbyname();
@@ -28,18 +27,8 @@ socketType socketCreate(char selectProtocol){
     }
    
     name.sin_family = AF_INET;
-    name.sin_addr.s_addr = INADDR_ANY; 
+    name.sin_addr.s_addr =  inet_addr(ip);
     name.sin_port= htons (1234);
-
-    hp = gethostbyname("localhost");
-    if (hp==0){
-        perror("Host nao encontrado");
-        exit(2);
-    }
-
-    bcopy ((char*)hp->h_addr, (char *)&name.sin_addr, hp->h_length);
-
-    printf("Numero da porta atribuida: %d\n",ntohs(name.sin_port));
 
     socketType socketUDP;
     socketUDP.sock= sock;
@@ -47,25 +36,49 @@ socketType socketCreate(char selectProtocol){
     return socketUDP;
 }
 
-void sendPackageList(Package *packageList, socketType socket, int numberOfpackeges){
-    int lenghtPackageList = sizeof(packageList)/sizeof(packageList[0]), i = 0;
+void encapsulateIPPackage(Package *package, PackageIP *packageIP, char protocol, int numberOfPackages, int currentPackage,char* ip){
+    int fragmented=0;
+    int lastFragment=0;
+    setVersion(packageIP);
+    setServiceType(packageIP,protocol);
+    setTotalLength(packageIP);
+    setProtocol(packageIP,protocol);
+    setOptions(packageIP);
+    if(numberOfPackages>1)
+    {
+        fragmented=1;
+    }
 
-    while(i < numberOfpackeges) {
-        int lenghtPackage = sizeof(packageList[i]);
+    if(currentPackage==numberOfPackages){
+        lastFragment=1;
+    }
+    setFlags(packageIP, fragmented, lastFragment);
+    setFragmentOffset(packageIP,currentPackage);
+    setTimeToLive(packageIP);
+    setIdentification(packageIP,currentPackage);
+    setHeaderLength(packageIP);
+    setIP(ip, packageIP);
+    setHeaderCheckSum(packageIP,seed);
+    setData(packageIP,package);
+}
 
-        int resp = sendto(socket.sock, (char *)&packageList[i], lenghtPackage, 0, (struct sockaddr *)&socket.name, sizeof socket.name);
-
-        if (resp < 0) printf("[ERRO] Envio do pacote %d/%d",i,lenghtPackage);
-
+void sendPackageList(Package *packageList, socketType socket, int numberOfpackages, char protocol,char* ip){
+    int i = 0;
+    PackageIP* packageIP=createIPPackage();
+    int lengthPackageIP = sizeof(*(packageIP));
+    while(i < numberOfpackages) {
+        encapsulateIPPackage(&packageList[i], packageIP, protocol, numberOfpackages, i, ip);
+        int resp = sendto(socket.sock,(char*) packageIP, lengthPackageIP, 0, (struct sockaddr *)&socket.name, sizeof socket.name);
+        if (resp < 0) printf("[ERRO] Envio do pacote %d/%d", i, lengthPackageIP);
         i++;
     }
 }
 
-bool validateChecksum(Package *packageList, int numberOfpackeges){
+bool validateChecksum(Package *packageList, int numberOfpackages){
 
-    for(int i = 0; i < numberOfpackeges; i++){
-        int lenghtPackage = strlen(packageList[i].data);
-        unsigned int check = checksumVerify(packageList[i].data, lenghtPackage, seed);
+    for(int i = 0; i < numberOfpackages; i++){
+        int lengthPackage = strlen(packageList[i].data);
+        unsigned int check = checksumVerify(packageList[i].data, lengthPackage, seed);
         if(check != packageList[i].checksum){
             return false;
         }
@@ -92,7 +105,7 @@ void populatePackage(Package *pack, char* data, int16_t originPort, int16_t dest
     pack->size = strlen(pack->data);
 }
 
-void fragmentsToPackage(char fragments[1024][1024], int numberOfFragments, Package * packagelist, int *numberOfpackeges)
+void fragmentsToPackage(char fragments[1024][1024], int numberOfFragments, Package * packagelist, int *numberOfpackages)
 {
     int sizeOfFragmentsAux;
     int j=0,aux=0, i=0;
@@ -107,7 +120,7 @@ void fragmentsToPackage(char fragments[1024][1024], int numberOfFragments, Packa
             char * fragAux= fragments[i] + j*32;
             populatePackage(package, fragAux, 1234, 1234);
             packagelist[aux] = *package;
-            *numberOfpackeges = *numberOfpackeges + 1;
+            *numberOfpackages = *numberOfpackages + 1;
             if(sizeOfFragmentsAux >= 31) {
                 packagelist[aux].data[32]='\0';
                 packagelist[aux].checksum = checksumVerify(packagelist[aux].data, 32, 0);
@@ -122,43 +135,35 @@ void fragmentsToPackage(char fragments[1024][1024], int numberOfFragments, Packa
     }
 }
  
-void sendInfoPackege(int numberPackage, socketType socketData){
+void sendInfoPackage(int numberPackage, socketType socketData){
     char number[10];
     sprintf(number, "%d", numberPackage);
-    int resp = sendto(socketData.sock,number, sizeof(number), 0, (struct sockaddr *)&socketData.name, sizeof socketData.name);
+    int resp = sendto(socketData.sock, number, sizeof(number), 0, (struct sockaddr *)&socketData.name, sizeof socketData.name);
 
     if (resp < 0) printf("[ERROR] envio do numeri de pacotes");
 }
 
-void sendPackage(Package *packageList, char protocol, int numberOfpackeges){
-    socketType socketData = socketCreate(protocol);
-
-    sendInfoPackege(numberOfpackeges, socketData);
-
-    bool check = validateChecksum(packageList, numberOfpackeges);
+void sendPackage(Package *packageList, char protocol, int numberOfpackages, char* ip){
+    socketType socketData = socketCreate(protocol,ip);
+    sendInfoPackage(numberOfpackages, socketData);
+    bool check = validateChecksum(packageList, numberOfpackages);
     if(check){
-        sendPackageList(packageList, socketData, numberOfpackeges);
+        sendPackageList(packageList, socketData, numberOfpackages, protocol,ip);
     }else{
         perror("Pacote errado");
     }
 }
 
 int main() {
-    int sock = 0, i=0,numberOfFragments, numberOfpackeges=0;
+    int sock = 0, i=0,numberOfFragments, numberOfpackages=0;
     Package * packageList =  malloc(1024*sizeof(Package));
-    PackageIP *packPezinho = createIPPackage();
     char fragments[1024][1024];
        
     createFragments("teste.txt", splitFragment, fragments, &numberOfFragments);
 
-    fragmentsToPackage(fragments, numberOfFragments, packageList, &numberOfpackeges);
+    fragmentsToPackage(fragments, numberOfFragments, packageList, &numberOfpackages);
 
-    setIP("123.3123.123", packPezinho);
-    printf("\nORIGEM: %s\n",packPezinho->sourceIpAddress);
-    printf("\nDESTINO: %s\n",packPezinho->destinationIp);
-
-    sendPackage(packageList, 'U', numberOfpackeges);
-
+    sendPackage(packageList, 'U', numberOfpackages,"127.0.0.1");
 
     return 0;
 }

@@ -7,7 +7,7 @@
 #include <strings.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include "udpLib.h"
+#include "ipLib.h"
 
 socketType socketCreate(char selectProtocol){
     int sock, len;
@@ -44,7 +44,7 @@ socketType socketCreate(char selectProtocol){
     return socketUDP;
 }
 
-void receivePackage(char protocol, Package * packagelist, int *numberOfPackeges) {
+void receivePackage(char protocol, PackageIP * packagelist, int *numberOfPackages) {
     socketType socketData = socketCreate(protocol);
     Package * package = createPackage();
     int i=0, len=0;
@@ -53,19 +53,24 @@ void receivePackage(char protocol, Package * packagelist, int *numberOfPackeges)
     recvfrom(socketData.sock, number, sizeof(number), 0, (struct sockaddr *)&socketData.name, &len);
     
     len = sizeof(socketData.name);
-    *numberOfPackeges = atoi(number);
-    
-    while(i < *numberOfPackeges) {
+    *numberOfPackages = atoi(number);
+    while(i < *numberOfPackages) {
         recvfrom(socketData.sock, (char *)&packagelist[i], sizeof(packagelist[i]), 0, (struct sockaddr *)&socketData.name, &len);
-        unsigned int check = checksumVerify(packagelist[i].data,(strlen(packagelist[i].data)),seed);
-        if(check != packagelist[i].checksum){
-           printf("\n\n [ERROR] Pacote %d , esta incorreto, checksum recebido %d, check %d \n", i+1, packagelist[i].checksum, check);
+
+        unsigned int check = checksumVerify(packagelist[i].package.data, (strlen(packagelist[i].package.data)),seed);
+        if(check != packagelist[i].package.checksum){
+           printf("\n\n [ERROR] Pacote %d , esta incorreto, checksum recebido %d, check %d \n", i+1, packagelist[i].package.checksum, check);
+        }
+
+        unsigned int checkIP =  getCheckSumHeader(&packagelist[i]);
+        if( checkIP!= packagelist[i].headerCheckSum){
+           printf("\n\n [ERROR] Pacote %d , esta incorreto, headerchecksum recebido %d, headerchecksum %d \n", i+1, packagelist[i].headerCheckSum, checkIP);
         }
         i++;
     }
 }
 
-void createFILE(Package * packageList, int numberOfPackeges) {
+void createFILE(PackageIP * packageList, int numberOfPackages) {
   FILE *output_file;
   int i = 0;
   output_file = fopen("new_file.txt", "w");
@@ -73,23 +78,23 @@ void createFILE(Package * packageList, int numberOfPackeges) {
   if (output_file == NULL)
     printf("\nError in file read!\n");
 
-  while(i < numberOfPackeges) {
-    fwrite(packageList[i].data, sizeof(char), strlen(packageList[i].data), output_file);
+  while(i < numberOfPackages) {
+    fwrite(packageList[i].package.data, sizeof(char), strlen(packageList[i].package.data), output_file);
     i++;
   }
 }
 
-void printPackage(Package * packageList, int numberOfPackeges){
-    for(int i=0;i<numberOfPackeges;i++){
-        searchInfo(&packageList[i]);
+void printPackage(PackageIP * packageList, int numberOfPackages){
+    for(int i=0;i<numberOfPackages;i++){
+        searchInfo(&packageList[i].package);
     }
 }
 
 int main() {
-    int numberOfPackeges;
-    Package * packageList =  malloc(1024*sizeof(Package));
-    receivePackage('U', packageList, &numberOfPackeges);
-    createFILE(packageList, numberOfPackeges);
-    printPackage(packageList, numberOfPackeges);
+    int numberOfPackages;
+    PackageIP * packageList =  malloc(1024*sizeof(PackageIP));
+    receivePackage('U', packageList, &numberOfPackages);
+    createFILE(packageList, numberOfPackages);
+    printPackage(packageList, numberOfPackages);
     exit(0);
 }
